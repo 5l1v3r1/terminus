@@ -1,21 +1,52 @@
 import socketserver
 import socket
+import signal
 from multiprocessing import Pool, Queue
 from time import sleep
 from os import remove
 from sys import exit
 from pathlib import Path
-import signal
-
-MQ = MESSAGE_QUEUE = Queue()
+from OpenSSL import crypto, SSL
 
 def initializer():
+    'Ignore keyboard interrupts in child processes'
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    
+def generate_certificate(certfile, keyfile):
+    'Generate a random SSL certificate'
+
+    # create a key pair
+    k = crypto.PKey()
+    k.generate_key(crypto.TYPE_RSA, 1024)
+
+    # create a self-signed cert
+    cert = crypto.X509()
+    cert.get_subject().C  = "US"
+    cert.get_subject().ST = str(randint(1,10000000))
+    cert.get_subject().L  = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    cert.get_subject().O  = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+    cert.get_subject().OU = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD" 
+    cert.get_subject().CN = "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+    cert.set_serial_number(1000)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(10*365*24*60*60)
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(k)
+    cert.sign(k, 'sha256')
+
+    open(certfile, "wb").write(
+        crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+    open(keyfile, "wb").write(
+        crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
 
 class Logger:
     '''Basic logger class. The TCP and UDP servers will extend
     this class and inherit the `Logger.log` method.
     '''
+    
+    # Queue for simple transfer of alerts between
+    # processes
+    MQ = MESSAGE_QUEUE = Queue()
 
     def __init__(self):
         'Ensure that the "template" variable is defined for the class.'
@@ -44,7 +75,7 @@ class Logger:
     def log(self):
         'Craft a log message and write it to a socket.'
 
-        MQ.put(self.get_message())
+        Logger.MQ.put(self.get_message())
 
 class TCP(socketserver.BaseRequestHandler,Logger):
     'Basic TCP handler'
@@ -106,7 +137,7 @@ if __name__ == '__main__':
 
     try:
 
-        while True: print(MQ.get())
+        while True: print(Logger.MQ.get())
 
     except KeyboardInterrupt as e:
         print('\n^C captured. Shutting down...')
