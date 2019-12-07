@@ -1,0 +1,7 @@
+# You'll need to update the interfaces and ports accordingly
+iptables -t nat -A PREROUTING -d {interface_ip} -p udp -m multiport --dports 69:65535 -j LOG
+iptables -t nat -A PREROUTING -d {interface_ip} -p udp -m multiport --dports 1:67 -j LOG
+iptables -t nat -A PREROUTING -d {interface_ip} -p tcp -m state --state NEW -m multiport --dports 2:65535 -j LOG
+iptables -t nat -A PREROUTING -d {interface_ip} -p tcp -m state --state NEW -m multiport --dports 2:65535 -j DNAT --to-destination {interface_ip}:80
+iptables -t nat -A PREROUTING -d {interface_ip} -p udp -m multiport --dports 1:67 -j DNAT --to-destination {interface_ip}:81
+iptables -t nat -A PREROUTING -d {interface_ip} -p udp -m multiport --dports 69:65535 -j DNAT --to-destination {interface_ip}:81
