@@ -65,16 +65,6 @@ class UDP(socketserver.BaseRequestHandler,Logger):
         self.log()
         pass
 
-class SCTP(Logger):
-    'Basic SCTP handler'
-
-    template = '{} connection received from: {}'
-
-    @staticmethod
-    def log(addr):
-
-        MQ.put(SCTP.template.format('SCTP',addr))
-
 def start_tcp(host,port):
     'Start a TCP server'
 
